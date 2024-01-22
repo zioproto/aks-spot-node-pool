@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echoserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: echoserver
+  template:
+    metadata:
+      labels:
+        run: echoserver
+    spec:
+      nodeSelector:
+        kubernetes.azure.com/mode: user
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: kubernetes.azure.com/scalesetpriority
+                operator: In
+                values:
+                - spot
+      tolerations:
+      - key: "kubernetes.azure.com/scalesetpriority"
+        operator: "Equal"
+        value: "spot"
+        effect: "NoSchedule"
+      containers:
+      - name: echoserver
+        image: gcr.io/google_containers/echoserver:1.10
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 6
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "1000Mi"
+            cpu: "1000m"
