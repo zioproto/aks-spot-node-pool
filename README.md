@@ -28,11 +28,39 @@ To simulate a spot node eviction, run the following commands:
 
 ```bash
 az vmss list
+vmss_name=$(az vmss list --resource-group MC_AKS-SPOTTY_SPOTTY-AKS_EASTUS --query "[].name" -o tsv | grep spot)
 # use actual node resource group and vmss name from the previous command
-az vmss list-instances --resource-group MC_AKS-SPOTTY_SPOTTY-AKS_EASTUS --name aks-spotb573-16686795-vmss --output json --query "[].instanceId"
+az vmss list-instances \
+  --resource-group MC_AKS-SPOTTY_SPOTTY-AKS_EASTUS \
+  --name $vmss_name \
+  --output json --query "[].instanceId"
+
 # use actual instance id from the previous command
-az vmss simulate-eviction --resource-group MC_AKS-SPOTTY_SPOTTY-AKS_EASTUS --name aks-spotb573-16686795-vmss --instance-id 11
+
+az vmss simulate-eviction \
+   --resource-group MC_AKS-SPOTTY_SPOTTY-AKS_EASTUS \
+   --name $vmss_name \
+   --instance-id 1
 ```
+
+This operation is logged:
+
+```bash
+az monitor activity-log list --offset 10m -g MC_aks-spotty_spotty-aks_eastus -o json | jq ".[] | {eventTimestamp, operationName}"
+```
+
+You should get an output like:
+```
+{
+  "eventTimestamp": "2024-01-22T11:04:02.0525374Z",
+  "operationName": {
+    "localizedValue": "Simulate Eviction of spot Virtual Machine in Virtual Machine Scale Set",
+    "value": "Microsoft.Compute/virtualMachineScaleSets/virtualMachines/simulateEviction/action"
+  }
+}
+```
+
+Is possible to ship Activity Log to Log Analytics workspace and query it from there.
 
 You can see the simulation in the `AzureActivity` log analytics table.
 
